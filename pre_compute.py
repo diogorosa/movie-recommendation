@@ -41,7 +41,7 @@ def cf_similarity_calculator(m_1, m_2):
     print "--------------------------------------------------"
     print "item similarity"
     try:
-        return {"movie_id":m_2,"sim":(final_sum/(math.sqrt(quad_i)*math.sqrt(quad_j)))}
+        return {"movie_id":m_1,"sim":(final_sum/(math.sqrt(quad_i)*math.sqrt(quad_j)))}
     except ZeroDivisionError:
         print "no similarity here"
     print "--------------------------------------------------"
@@ -52,16 +52,27 @@ def preditction(u_id, m_prediction):
     ratings = db.ratings
     movies = db.movies
     similars = []
+    sim_and_r = []
     for rating in ratings.find({"u_id":str(u_id)}):
         print int(rating["m_id"])
         if movies.find_one({"m_id":rating["m_id"]}):
             sim = cf_similarity_calculator(int(rating["m_id"]), m_prediction)
             if sim:
+                sim["u_rating"]=rating["score"]
                 similars.append(sim)
+
+
     print "----------------All similar items-----------------------"
     sorted_list =  sorted(similars, key=lambda k: k['sim'], reverse=True)
     half_list = sorted_list[:len(sorted_list)/2]
     print half_list
+    s_sum = 0
+    sr_sum = 0
+    for item in half_list:
+        sr_sum += item["sim"]*item["u_rating"]
+        s_sum += abs(item["sim"])
+    print sr_sum/s_sum
+
 
 
 
