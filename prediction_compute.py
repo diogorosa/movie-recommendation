@@ -8,7 +8,6 @@ def cf_similarity_calculator(m_1, m_2):
     movies = db.movies
     users = db.users
     ratings = db.ratings
-    #para cada elemento calcular a similaridade com todos os seguintes
     movie_i = movies.find_one({"m_id":str(m_1)})
     movie_j = movies.find_one({"m_id":str(m_2)},)
     users_i = ratings.find({"m_id":str(m_1)})
@@ -68,6 +67,7 @@ def preditction(u_id, m_prediction):
     print half_list
     s_sum = 0
     sr_sum = 0
+    print "---------------Preditiction for movie " + str(m_prediction) +" -------------------"
     for item in half_list:
         sr_sum += item["sim"]*item["u_rating"]
         s_sum += abs(item["sim"])
@@ -81,4 +81,5 @@ start = time.time()
 print "Pre compute began"
 preditction(1,666)
 end = time.time()
+print "compute time"
 print end - start
