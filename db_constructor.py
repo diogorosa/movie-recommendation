@@ -54,6 +54,7 @@ def build_movies_db():
             date_time_converter(movie_data[2])
             print datetime.datetime(2011, 12, 4, 16, 46, 59, 786000)
             movies.insert(movie)
+    #movies.ensure_index({"movie.ratings":1})
 
 def build_users_db():
     users_txt = open("ml-100k/u.user", "r")
