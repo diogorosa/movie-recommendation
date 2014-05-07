@@ -2,6 +2,7 @@ import sys
 import select
 import math
 import re
+import time
 from pymongo import MongoClient
 import datetime
 from time import strptime
@@ -54,7 +55,7 @@ def build_movies_db():
             date_time_converter(movie_data[2])
             print datetime.datetime(2011, 12, 4, 16, 46, 59, 786000)
             movies.insert(movie)
-    #movies.ensure_index({"movie.ratings":1})
+    movies.ensure_index([("m_id", 1), ("movie.ratings",1)])
 
 def build_users_db():
     users_txt = open("ml-100k/u.user", "r")
@@ -93,8 +94,12 @@ def build_ratings_db():
                   "timestamp":datetime.datetime.utcfromtimestamp(float(rating_data[3]))}
         users.update({"u_id":rating_data[0]}, {"$inc": {"t_rate":int(rating_data[2]), "g_rate":1}})
         ratings.insert(rating)
-
+start = time.time()
+print "db constructor start"
 db_drop()
 build_movies_db()
 build_users_db()
 build_ratings_db()
+end = time.time()
+print "time"
+print end - start

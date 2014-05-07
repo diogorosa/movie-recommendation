@@ -76,7 +76,6 @@ def preditction(u_id, m_prediction):
 
 
 
-#cf_similarity_calculator(1,2)
 start = time.time()
 print "Pre compute began"
 preditction(1,666)
