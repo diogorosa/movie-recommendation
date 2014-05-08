@@ -80,10 +80,8 @@ def my_rated_5(most_seen, u_id):
     if (top_movie["avg"] - top_movie_2["avg"]) < avg_r_var:
         tags_list.append(top_movie["tag"])
         tags_list.append(top_movie_2["tag"])
-        print "inferior"
     else:
         tags_list.append(top_movie)
-        print "just one"
 
     rated_movies = movies.find({"ratings":{"$elemMatch":{"u_id":u_id}}} )
     for movie in rated_movies:
@@ -92,7 +90,10 @@ def my_rated_5(most_seen, u_id):
                 if tag == r_tag:
                     rate = movies.find_one({"m_id":movie['m_id']}, {"ratings":{"$elemMatch":{"u_id":u_id}}})['ratings'][0]
                     m_r_5.append({"m_id":movie['m_id'], "rate": rate["score"], "m_title":movie['m_title']})
-    return sorted(m_r_5[0:5], key=lambda k: k['rate'], reverse=True)
+    sorted_rate = sorted(m_r_5[0:5], key=lambda k: k['rate'], reverse=True)
+    movies.update({"m_id":movie['m_id']},
+                {'$set':{'top_5': sorted_rate}})
+    return sorted_rate
 
 
 def get_imdb_plot(id):
@@ -106,25 +107,39 @@ def get_m_desc(imdb_link):
     html = requests.get(imdb_link).text
     soup = BS(html)
     desc = soup.find(itemprop="description")
-    print desc.text
+    print desc
+    return desc
 
 def synopsis_fetcher(movies):
+    print movies
+    client = MongoClient()
+    db = client.recommender_db
+    movies_db = db.movies
+    synopsis = []
     for movie in movies:
+        #print movie
+        synopse = {}
         s_rotten = RT().feeling_lucky(movie['m_title'])
-        if s_rotten['synopsis']:
-            print s_rotten
+        r_synopse = s_rotten['synopsis']
+        if r_synopse:
+            #print r_synopse
+            synopse = {'m_id': movie['m_id'], 'sin':r_synopse}
         else:
             i_id = s_rotten['alternate_ids']['imdb']
-            print get_imdb_plot(i_id)
+            imdb_request_plot = get_imdb_plot(i_id)
+            if imdb_request_plot:
+                #print imdb_request_plot
+                synopse = {'m_id': movie['m_id'], 'sin':imdb_request_plot}
+            else:
+                print "no movie plot or synopse "
+        if synopse:
+            synopsis.append(synopse)
+            print "----------------fetched synopse--------------"
+            print synopse
+            print "---------------------------------------------"
+            movies_db.update({"m_id":synopse['m_id']}, {'$set':{"synopsis":synopse['sin'] }})
+    return synopsis
 
-client = MongoClient()
-db = client.recommender_db
-users = db.users
-movies = db.movies
-m = movies.find_one()
-i_id = "1"
-t = tag_organizer(i_id)
-tag_avg = avg_rate_tag(t, i_id)
-most_rated_5 =  my_rated_5(tag_avg, i_id)
-get_m_desc(m['imdb-url'])
-synopsis_fetcher(most_rated_5)
+
+
+
