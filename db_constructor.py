@@ -73,6 +73,7 @@ def build_users_db():
                 "t_rate":0}
         users.insert(user)
         print user
+    users.ensure_index([("u_id", 1), ("t_rate", 1)])
 
 def build_ratings_db():
     ratings_txt = open("ml-100k/u.data", "r")
@@ -94,6 +95,7 @@ def build_ratings_db():
                   "timestamp":datetime.datetime.utcfromtimestamp(float(rating_data[3]))}
         users.update({"u_id":rating_data[0]}, {"$inc": {"t_rate":int(rating_data[2]), "g_rate":1}})
         ratings.insert(rating)
+    ratings.ensure_index([("u_id", 1), ("m_id", 1)])
 start = time.time()
 print "db constructor start"
 db_drop()
