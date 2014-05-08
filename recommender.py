@@ -2,12 +2,15 @@ from pymongo import MongoClient
 import math
 import time
 import operator
+from rottentomatoes import RT
+import imdb
+from bs4 import BeautifulSoup as BS
+import requests
 
 tags = ["action", "adventure", "animation", "childrens", "comedy",
            "crime", "documentary", "drama", "fantasy", "film-noir",
             "horror", "musical", "mystery", "romance", "sci-fi",
             "thriller", "war", "western"]
-
 
 #order user ratings based on tag names
 #most rated types will stay at the top
@@ -92,11 +95,36 @@ def my_rated_5(most_seen, u_id):
     return sorted(m_r_5[0:5], key=lambda k: k['rate'], reverse=True)
 
 
+def get_imdb_plot(id):
+    i = imdb.IMDb()
+    i = imdb.IMDb(accessSystem='http')
+    m = i.get_movie(id)
+    m_plot = m.get('plot')
+    return m_plot
+
+def get_m_desc(imdb_link):
+    html = requests.get(imdb_link).text
+    soup = BS(html)
+    desc = soup.find(itemprop="description")
+    print desc.text
+
+def synopsis_fetcher(movies):
+    for movie in movies:
+        s_rotten = RT().feeling_lucky(movie['m_title'])
+        if s_rotten['synopsis']:
+            print s_rotten
+        else:
+            i_id = s_rotten['alternate_ids']['imdb']
+            print get_imdb_plot(i_id)
+
 client = MongoClient()
 db = client.recommender_db
 users = db.users
-
+movies = db.movies
+m = movies.find_one()
 i_id = "1"
 t = tag_organizer(i_id)
 tag_avg = avg_rate_tag(t, i_id)
-print my_rated_5(tag_avg, i_id)
+most_rated_5 =  my_rated_5(tag_avg, i_id)
+get_m_desc(m['imdb-url'])
+synopsis_fetcher(most_rated_5)
