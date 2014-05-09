@@ -1,5 +1,4 @@
-import recommender as r
-import prediction_compute as p
+import hybrid_recommend as r
 from pymongo import MongoClient
 import sys
 import datetime
@@ -91,11 +90,29 @@ def see_movie():
     else:
         rate_movies()
 
+def view_suggestions():
+    movies = db.movies
+    suggestions = db.suggestions
+    unseen = movies.find({"ratings.u_id":{"$ne":general_user}}).limit(2)
+    for movie in unseen:
+        r.hybrid_model(movie, general_user)
+    to_suggest = db.suggestions.aggregate([{"$match":{"u_id":general_user}}, {"$sort":{"score":-1}}])
+    print to_suggest
+    for s in to_suggest['result']:
+        print "-------------Suggestion---------------"
+        m = {}
+        m = movies.find_one({"m_id":s['m_id']})
+        print m
+        print m['m_title']
+        print m['tags']
+        if m.has_key('sin'):
+            print m['sin']
 def exit():
     sys.exit(0)
 
-options = ['insert u_id', 'seen movies', 'unseen movies', 'rate movies', 'see movie','View Suggestions','Quit']
-callbacks = [get_user_id, show_movie_collection, unseen_movies, rate_movies, see_movie, exit]
+options = ['insert u_id', 'seen movies', 'unseen movies', 'rate movies', 'see movie','view suggestions','Quit']
+callbacks = [get_user_id, show_movie_collection, unseen_movies, rate_movies, see_movie, view_suggestions, exit]
+
 
 while True:
     print "\n-------------- Movie Recommender ---------------"

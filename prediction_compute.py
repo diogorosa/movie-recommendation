@@ -73,14 +73,10 @@ def preditction(u_id, m_prediction):
     for item in half_list:
         sr_sum += item["sim"]*item["u_rating"]
         s_sum += abs(item["sim"])
-    return sr_sum/s_sum
-
-
-
-
-start = time.time()
-print "Pre compute began"
-#preditction(1,666)
-end = time.time()
-print "compute time"
-print end - start
+    print s_sum
+    print sr_sum
+    try:
+        return sr_sum/s_sum
+    except ZeroDivisionError:
+        return 0
+        print "Item based prediction cant be done"

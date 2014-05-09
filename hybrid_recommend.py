@@ -18,7 +18,7 @@ def synopse_compare(u_movies, r_movie):
     #print tfidf[0:1]
     #cosine similarity of others to iten zero
     cosine_similarities = linear_kernel(tfidf[0:1], tfidf).flatten()
-    #print cosine_similarities
+    print cosine_similarities
     related_docs_indices = cosine_similarities.argsort()[:-6:-1]
     print related_docs_indices
     return cosine_similarities[related_docs_indices]
@@ -40,6 +40,8 @@ def content_analysis(item, u_id):
     if item.has_key('sin'):
         synopsis = r.synopsis_fetcher(top_4)
         text_result = synopse_compare(synopsis, item)
+        print sum(text_result[1:])
+        print r.tag_classifier(item, most_seen, tag_avg, 3)
         return sum(text_result[1:]) + r.tag_classifier(item, most_seen, tag_avg, 3)
     else:
         print "movie to compare has no synopsis"
@@ -52,20 +54,20 @@ def hybrid_model(item, u_id):
     content_based = content_analysis(item, u_id)
     collaborative = p.preditction(u_id, item['m_id'])
     suggestion = {"u_id":u_id, "m_id":item["m_id"]}
-    if content_based == 0:
+    if content_based == 0 & int(collaborative) > 0:
         print "not enough user/movie rate will be only collabprative"
         print collaborative
         suggestion["score"]=collaborative
-    else:
+    elif collaborative > 0:
+        print collaborative
         print (content_based + collaborative)/2
         suggestion["score"] = (content_based + collaborative)/2
-    suggestions.insert(suggestion)
+    else:
+        print "data not accurate enough to suggest good movie"
+    if suggestion.has_key('score'):
+        suggestions.insert(suggestion)
 
 
-client = MongoClient()
-db = client.recommender_db
-movies = db.movies
-user_id = "1"
-not_rated_movies = list(movies.find({"ratings":{'$elemMatch':{"u_id":{'$ne':user_id}}}}).limit(20))
-for item in not_rated_movies:
-    hybrid_model(item, user_id)
+
+
+
