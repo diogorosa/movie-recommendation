@@ -65,35 +65,38 @@ def avg_rate_tag(tag_movies, u_id):
         rate_list.append({"tag":m_tag, "avg":avg_rating})
     return sorted(rate_list, key=lambda k: k['avg'], reverse=True)
 
-#returns 5 movies based on most rated and best rated tags of user
-#return based on first tag and second if avg rating on first - avg_rating
-#on second is < 0.8
-def my_rated_5(most_seen, u_id):
+
+#top 2 from two most rated tags
+def top_rated_4(u_id, top_rated, most_seen):
     client = MongoClient()
     db = client.recommender_db
     movies = db.movies
-    avg_r_var = 0.8
-    m_r_5 = []
-    tags_list = []
-    top_movie = most_seen[0]
-    top_movie_2 = most_seen[1]
-    if (top_movie["avg"] - top_movie_2["avg"]) < avg_r_var:
-        tags_list.append(top_movie["tag"])
-        tags_list.append(top_movie_2["tag"])
-    else:
-        tags_list.append(top_movie)
+    sum_rating = 0
+    avg_vote_qty = 0
+    filtered_top = []
+    top_tag_movies = []
+    filtered_top = filtered_top_tags(most_seen, top_rated)
+    for x in filtered_top[0:2]:
+        movie_query = movies.find({"tags":x['tag'],"ratings":{'$elemMatch':{"u_id":"1", "score":{'$gte':x['avg']}}}}, {"m_id":"1","m_title":1, "ratings":{'$elemMatch':{"u_id":"1"}}})
+        top_tag_movies.extend(list(movie_query)[0:2])
+    return top_tag_movies
+    #synopsis_fetcher(top_tag_movies)
 
-    rated_movies = movies.find({"ratings":{"$elemMatch":{"u_id":u_id}}} )
-    for movie in rated_movies:
-        for tag in movie['tags']:
-            for r_tag in tags_list:
-                if tag == r_tag:
-                    rate = movies.find_one({"m_id":movie['m_id']}, {"ratings":{"$elemMatch":{"u_id":u_id}}})['ratings'][0]
-                    m_r_5.append({"m_id":movie['m_id'], "rate": rate["score"], "m_title":movie['m_title']})
-    sorted_rate = sorted(m_r_5[0:5], key=lambda k: k['rate'], reverse=True)
-    movies.update({"m_id":movie['m_id']},
-                {'$set':{'top_5': sorted_rate}})
-    return sorted_rate
+def filtered_top_tags(most_seen, top_rated):
+    top_seen_rated = []
+    avg_vote_qty = genre_vote_qty(most_seen)
+    for genre in top_rated:
+        for item in most_seen:
+            if item.keys()[0] == genre['tag']:
+                if len(item.values()[0]) > avg_vote_qty:
+                    top_seen_rated.append(genre)
+    return top_seen_rated
+
+def genre_vote_qty(most_seen):
+    sum_rating = 0
+    for ratings in most_seen:
+        sum_rating += len(ratings.values()[0])
+    return sum_rating/float(len(most_seen))
 
 
 def get_imdb_plot(id):
@@ -102,7 +105,7 @@ def get_imdb_plot(id):
     m = i.get_movie(id)
     m_plot = m.get('plot')
     return m_plot
-
+#gets movie description scraping imdb movie site
 def get_m_desc(imdb_link):
     html = requests.get(imdb_link).text
     soup = BS(html)
@@ -110,6 +113,15 @@ def get_m_desc(imdb_link):
     print desc
     return desc
 
+def search_title_imdb(title):
+    i = imdb.IMDb()
+    movie_list = i.search_movie(title)
+    if movie_list:
+        i = imdb.IMDb(accessSystem='http')
+        m_id = i.get_imdbID(movie_list[0])
+        return get_imdb_plot(m_id)
+
+#fetch synopsis from rottentomatoes, imdb api and imdb site
 def synopsis_fetcher(movies):
     print movies
     client = MongoClient()
@@ -117,29 +129,59 @@ def synopsis_fetcher(movies):
     movies_db = db.movies
     synopsis = []
     for movie in movies:
-        #print movie
+        print movie['m_title']
         synopse = {}
-        s_rotten = RT().feeling_lucky(movie['m_title'])
-        r_synopse = s_rotten['synopsis']
-        if r_synopse:
-            #print r_synopse
-            synopse = {'m_id': movie['m_id'], 'sin':r_synopse}
-        else:
-            i_id = s_rotten['alternate_ids']['imdb']
-            imdb_request_plot = get_imdb_plot(i_id)
-            if imdb_request_plot:
-                #print imdb_request_plot
-                synopse = {'m_id': movie['m_id'], 'sin':imdb_request_plot}
+        movie_in_db = movies_db.find_one({'m_id':movie['m_id']})
+        if not movie_in_db.has_key('sin'):
+            print movie['m_title']
+            s_rotten = RT().search(movie['m_title'])
+            sy_from_rotten = check_in_rotten(movie)
+            if sy_from_rotten:
+                synopse = sy_from_rotten
             else:
-                print "no movie plot or synopse "
+                search_imdb = search_title_imdb(movie['m_title'])
+                if search_imdb:
+                    synopse = {'m_id': movie['m_id'], 'sin':search_imdb}
+        else:
+            synopsis.append(movie_in_db)
+            print "synopse append----------------------------"
         if synopse:
             synopsis.append(synopse)
             print "----------------fetched synopse--------------"
             print synopse
             print "---------------------------------------------"
-            movies_db.update({"m_id":synopse['m_id']}, {'$set':{"synopsis":synopse['sin'] }})
+            movies_db.update({"m_id":synopse['m_id']}, {'$set':{"sin":synopse['sin'] }})
     return synopsis
 
+def check_in_rotten(movie):
+    s_rotten = RT().search(movie['m_title'])
+    synopse = {}
+    if s_rotten:
+        m_rotten = s_rotten[0]
+        r_synopse = m_rotten['synopsis']
+        if r_synopse:
+            synopse = {'m_id': movie['m_id'], 'sin':r_synopse}
+        elif m_rotten.has_key('alternate_ids'):
+            i_id = m_rotten['alternate_ids']['imdb']
+            imdb_request_plot = get_imdb_plot(i_id)
+            if imdb_request_plot:
+                print imdb_request_plot
+                synopse = {'m_id': movie['m_id'], 'sin':imdb_request_plot}
+            else:
+                print "no movie plot or synopse "
+    return synopse
+
+#tags weighted sum the mix between most rated and most_seen
+#each tag in that mix has a weight of
+#(tag_organized/(weight of tag classifier) * index)
+def tag_classifier(item, most_seen, tag_avg, weight):
+    organized_tags =  filtered_top_tags(most_seen,tag_avg)
+    tag_weight = float(weight)/len(organized_tags)
+    tag_classifier_rate = 0
+    for i,tag in enumerate(organized_tags):
+        if tag['tag'] in item['tags']:
+            tag_classifier_rate = ((i+1) * tag_weight)
+    return tag_classifier_rate
 
 
 

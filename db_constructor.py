@@ -96,6 +96,7 @@ def build_ratings_db():
         users.update({"u_id":rating_data[0]}, {"$inc": {"t_rate":int(rating_data[2]), "g_rate":1}})
         ratings.insert(rating)
     ratings.ensure_index([("u_id", 1), ("m_id", 1)])
+
 start = time.time()
 print "db constructor start"
 db_drop()

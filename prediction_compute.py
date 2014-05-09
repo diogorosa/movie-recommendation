@@ -14,8 +14,8 @@ def cf_similarity_calculator(m_1, m_2):
     final_sum = 0
     quad_i = 0
     quad_j = 0
-    print movie_i["m_title"]
-    print movie_j["m_title"]
+    #print movie_i["m_title"]
+    #print movie_j["m_title"]
     for rate_i in movie_i["ratings"]:
         for rate_j in movie_j["ratings"]:
             if rate_j["u_id"] == rate_i["u_id"]:
@@ -23,6 +23,7 @@ def cf_similarity_calculator(m_1, m_2):
                 #print ratings.aggregate([{"$match": {"u_id":"1"}},{"$group":{"_id":"$u_id", "total": {"$sum": "$score"}}}])
                 #print ratings.find({"u_id":rate_i["u_id"]}).count()
                 product = ((rate_i["score"] - (user["t_rate"] / float(user["g_rate"]))) * (rate_j["score"] - (user["t_rate"] / float(user["g_rate"]))))
+                '''
                 print (rate_i["score"] - (user["t_rate"] / float(user["g_rate"]))) * (rate_j["score"] - (user["t_rate"] / float(user["g_rate"])))
                 print "rate in movie_ i"
                 print rate_i["score"]
@@ -34,16 +35,17 @@ def cf_similarity_calculator(m_1, m_2):
                 print user["g_rate"]
                 #print (rate_i["score"] - (user["t_rate"] / float(user["g_rate"])))
                 print product
+                '''
                 final_sum += product
                 quad_i += (rate_i["score"] - (user["t_rate"] /float(user["g_rate"])))**2
                 quad_j += (rate_j["score"] - (user["t_rate"] / float(user["g_rate"])))**2
-    print "--------------------------------------------------"
-    print "item similarity"
+    #print "--------------------------------------------------"
+    #print "item similarity"
     try:
         return {"movie_id":m_1,"sim":(final_sum/(math.sqrt(quad_i)*math.sqrt(quad_j)))}
     except ZeroDivisionError:
         print "no similarity here"
-    print "--------------------------------------------------"
+    #print "--------------------------------------------------"
 
 def preditction(u_id, m_prediction):
     client = MongoClient()
@@ -53,7 +55,7 @@ def preditction(u_id, m_prediction):
     similars = []
     sim_and_r = []
     for rating in ratings.find({"u_id":str(u_id)}):
-        print int(rating["m_id"])
+        #print int(rating["m_id"])
         if movies.find_one({"m_id":rating["m_id"]}):
             sim = cf_similarity_calculator(int(rating["m_id"]), m_prediction)
             if sim:
@@ -61,24 +63,24 @@ def preditction(u_id, m_prediction):
                 similars.append(sim)
 
 
-    print "----------------All similar items-----------------------"
+    #print "----------------All similar items-----------------------"
     sorted_list =  sorted(similars, key=lambda k: k['sim'], reverse=True)
     half_list = sorted_list[:len(sorted_list)/2]
-    print half_list
+    #print half_list
     s_sum = 0
     sr_sum = 0
     print "---------------Preditiction for movie " + str(m_prediction) +" -------------------"
     for item in half_list:
         sr_sum += item["sim"]*item["u_rating"]
         s_sum += abs(item["sim"])
-    print sr_sum/s_sum
+    return sr_sum/s_sum
 
 
 
 
 start = time.time()
 print "Pre compute began"
-preditction(1,666)
+#preditction(1,666)
 end = time.time()
 print "compute time"
 print end - start
