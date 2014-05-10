@@ -107,11 +107,20 @@ def view_suggestions():
         print m['tags']
         if m.has_key('sin'):
             print m['sin']
+def expected_recommend():
+  m_id = get_m_id()
+  movies = db.movies
+  suggestions = db.suggestions
+  movie = movies.find_one({"m_id":str(m_id)})
+  r.hybrid_model(movie, general_user)
+  print suggestions.find_one({"u_id":general_user, "m_id":str(m_id)})
+
+
 def exit():
     sys.exit(0)
 
-options = ['insert u_id', 'seen movies', 'unseen movies', 'rate movies', 'see movie','view suggestions','Quit']
-callbacks = [get_user_id, show_movie_collection, unseen_movies, rate_movies, see_movie, view_suggestions, exit]
+options = ['insert u_id', 'seen movies', 'unseen movies', 'rate movies', 'see movie','view suggestions', 'expected recommend','Quit']
+callbacks = [get_user_id, show_movie_collection, unseen_movies, rate_movies, see_movie, view_suggestions, expected_recommend , exit]
 
 
 while True:
