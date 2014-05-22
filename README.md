@@ -1,4 +1,4 @@
 movie-recommender
 =================
 
-Web Retrieval course project.
+Web Data Extraction and Analysis project
